@@ -1,0 +1,18 @@
+modules = ["python-3.10:v18-20230807-322e88b"]
+run = "uvicorn src.main:app --reload"
+
+[nix]
+channel = "stable-23_05"
+
+[unitTest]
+language = "python3"
+
+[gitHubImport]
+requiredFiles = [".replit", "replit.nix"]
+
+[deployment]
+run = ["sh", "-c", "uvicorn src.main:app"]
+deploymentTarget = "cloudrun"
+
+[[ports]]
+localPort = 8000

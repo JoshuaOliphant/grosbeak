@@ -1,0 +1,10 @@
+<div class="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
+    <h2 class="text-2xl font-bold mb-4">Customized Resume</h2>
+    <div id="resumeContent" class="prose prose-sm sm:prose lg:prose-lg xl:prose-xl max-w-none"></div>
+</div>
+
+<script>
+    // Render the markdown content
+    const resumeMarkdown = {{ resume_content | tojson }};
+    renderMarkdown(resumeMarkdown, 'resumeContent');
+</script>

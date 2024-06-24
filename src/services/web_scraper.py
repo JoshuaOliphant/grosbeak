@@ -1,10 +1,10 @@
 from openai import AsyncOpenAI
 import json
-from models.job import JobInformation
+from src.models.job import JobInformation
 import aiohttp
 import logfire
 from typing import Dict, Any
-from models.linkedin import LinkedInProfile
+from src.models.linkedin import LinkedInProfile
 
 
 class WebScraper:
@@ -23,7 +23,7 @@ class WebScraper:
                     self.base_url, headers=headers, data=payload
                 ) as response:
                     if response.status == 200:
-                        data = await response.json()
+                        data = await response .json()
                         logfire.info(f"Successfully fetched job description: \n {data}")
                         return await self.parse_serper_response(data)
                     else:

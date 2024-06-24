@@ -1,7 +1,7 @@
 from typing import List, Optional, Union
 from pydantic import BaseModel, Field, field_validator
 from datetime import date
-from utils.flexible_date_parser import flexible_date_parser
+from src.utils.flexible_date_parser import flexible_date_parser
 
 
 class Position(BaseModel):

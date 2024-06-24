@@ -1,40 +1,39 @@
 from openai import AsyncOpenAI
-from services.web_scraper import WebScraper
-from services.github_scraper import GithubScraper
+from src.services.web_scraper import WebScraper
+from src.services.github_scraper import GithubScraper
 import os
 import aiofiles
 import asyncio
 import json
-from agents.resume_agent import ResumeAgent
-from agents.linkedin_agent import LinkedInAgent
-from agents.existing_resume_agent import ExistingResumeAgent
-from agents.aggregator_agent import AggregatorAgent
-from models.resume import ResumeContent
+from src.agents.resume_agent import ResumeAgent
+from src.agents.linkedin_agent import LinkedInAgent
+from src.agents.existing_resume_agent import ExistingResumeAgent
+from src.agents.aggregator_agent import AggregatorAgent
+from src.models.resume import ResumeContent
 from typing import Any, Dict
-from utils.json_encoder import CustomJSONEncoder
+from src.utils.json_encoder import CustomJSONEncoder
 import logfire
 
 
 class Orchestrator:
-    def __init__(self, llm_client: AsyncOpenAI):
+
+    def __init__(self, llm_client: AsyncOpenAI, serper_api_key: str, github_api_key: str):
         self.llm_client = llm_client
-        self.web_scraper = WebScraper(
-            api_key=os.environ.get("SERPER_API_KEY"), llm_client=self.llm_client
-        )
+        self.web_scraper = WebScraper(api_key=serper_api_key,
+                                      llm_client=self.llm_client)
         self.github_scraper = GithubScraper(
-            github_token=os.environ.get("GITHUB_API_KEY")
-        )
+            github_token=github_api_key)
 
     async def read_resume_file(self, file_path: str) -> str:
         try:
             async with aiofiles.open(file_path, mode="r") as file:
                 return await file.read()
         except IOError as e:
-            raise ValueError(f"Unable to read resume file at {file_path}: {str(e)}")
+            raise ValueError(
+                f"Unable to read resume file at {file_path}: {str(e)}")
 
-    async def process_with_agent(
-        self, agent: ResumeAgent, context: Dict[str, Any]
-    ) -> ResumeContent:
+    async def process_with_agent(self, agent: ResumeAgent,
+                                 context: Dict[str, Any]) -> ResumeContent:
         prompt = self.construct_prompt(agent, context)
         response = await self.llm_client.chat.completions.create(
             model="gpt-4o",
@@ -42,14 +41,19 @@ class Orchestrator:
             messages=[
                 {
                     "role": "system",
-                    "content": f"You are the {agent.name}. {agent.description}",
+                    "content":
+                    f"You are the {agent.name}. {agent.description}",
                 },
-                {"role": "user", "content": prompt},
+                {
+                    "role": "user",
+                    "content": prompt
+                },
             ],
         )
         return response
 
-    def construct_prompt(self, agent: ResumeAgent, context: Dict[str, Any]) -> str:
+    def construct_prompt(self, agent: ResumeAgent, context: Dict[str,
+                                                                 Any]) -> str:
         if isinstance(agent, ExistingResumeAgent):
             return f"""
             Create a tailored resume based on the following information:
@@ -99,16 +103,14 @@ class Orchestrator:
         github_url: str = None,
     ) -> str:
         # Gather all necessary information concurrently
-        job_info_task = self.web_scraper.fetch_and_parse_job_description(job_url)
+        job_info_task = self.web_scraper.fetch_and_parse_job_description(
+            job_url)
         linkedin_profile_task = self.web_scraper.fetch_and_parse_linkedin_profile(
-            linkedin_url
-        )
+            linkedin_url)
         existing_resume_task = self.read_resume_file(resume_file_path)
-        github_info_task = (
-            self.github_scraper.fetch_github_info(github_url)
-            if github_url
-            else asyncio.create_task(asyncio.sleep(0))
-        )
+        github_info_task = (self.github_scraper.fetch_github_info(github_url)
+                            if github_url else asyncio.create_task(
+                                asyncio.sleep(0)))
 
         job_information, linkedin_profile, existing_resume, github_info = (
             await asyncio.gather(
@@ -116,8 +118,7 @@ class Orchestrator:
                 linkedin_profile_task,
                 existing_resume_task,
                 github_info_task,
-            )
-        )
+            ))
 
         context = {
             "job_information": job_information,
@@ -127,12 +128,13 @@ class Orchestrator:
         }
 
         # Process with ExistingResumeAgent and LinkedInAgent concurrently
-        existing_resume_task = self.process_with_agent(ExistingResumeAgent(), context)
-        linkedin_resume_task = self.process_with_agent(LinkedInAgent(), context)
+        existing_resume_task = self.process_with_agent(ExistingResumeAgent(),
+                                                       context)
+        linkedin_resume_task = self.process_with_agent(LinkedInAgent(),
+                                                       context)
 
         existing_resume_output, linkedin_resume_output = await asyncio.gather(
-            existing_resume_task, linkedin_resume_task
-        )
+            existing_resume_task, linkedin_resume_task)
 
         # Prepare context for AggregatorAgent
         aggregator_context = {
@@ -142,21 +144,18 @@ class Orchestrator:
         }
 
         # Process with AggregatorAgent
-        final_resume = await self.process_with_agent(
-            AggregatorAgent(), aggregator_context
-        )
+        final_resume = await self.process_with_agent(AggregatorAgent(),
+                                                     aggregator_context)
 
         return final_resume.markdown_content
 
-    async def write_resume_to_file(
-        self, resume_content: str, output_file_path: str
-    ) -> None:
+    async def write_resume_to_file(self, resume_content: str,
+                                   output_file_path: str) -> None:
         try:
             async with aiofiles.open(output_file_path, mode="w") as file:
                 await file.write(resume_content)
             logfire.info(f"Resume successfully written to {output_file_path}")
         except IOError as e:
             logfire.error(
-                f"Failed to write resume to file {output_file_path}: {str(e)}"
-            )
+                f"Failed to write resume to file {output_file_path}: {str(e)}")
             raise

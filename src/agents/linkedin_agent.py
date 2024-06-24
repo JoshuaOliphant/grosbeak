@@ -1,4 +1,4 @@
-from agents.resume_agent import ResumeAgent
+from src.agents.resume_agent import ResumeAgent
 
 
 class LinkedInAgent(ResumeAgent):
