@@ -1,0 +1,20 @@
+[tool.poetry]
+name = "grosbeak"
+version = "0.1.0"
+description = ""
+authors = ["Joshua Oliphant <joshua.oliphant@hey.com>"]
+readme = "README.md"
+package-mode = false
+
+[tool.poetry.dependencies]
+python = "^3.12"
+chromadb = "^0.5.3"
+openai = "^1.35.3"
+logfire = "^0.42.0"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[
