@@ -2,7 +2,7 @@
 
 {% block content %}
 <h1 class="text-3xl font-bold mb-4">AI Resume Customizer</h1>
-<form id="resume-form" enctype="multipart/form-data" class="space-y-4">
+<form id="resume-form" hx-post="/customize-resume" hx-target="#result" hx-indicator="#loading" enctype="multipart/form-data" class="space-y-4">
     <div>
         <label for="job_url" class="block text-sm font-medium text-gray-700">Job URL:</label>
         <input type="url" id="job_url" name="job_url" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
@@ -16,4 +16,32 @@
         <input type="url" id="github_url" name="github_url" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
     </div>
     <div>
-        <label for="resume_file" class="block text-sm
+        <label for="resume_file" class="block text-sm font-medium text-gray-700">Upload Resume:</label>
+        <input type="file" id="resume_file" name="resume_file" required class="mt-1 block w-full" accept=".pdf,.doc,.docx,.txt,.md">
+    </div>
+    <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+        Customize Resume
+    </button>
+</form>
+<div id="loading" class="htmx-indicator hidden">
+    Processing... Please wait.
+</div>
+<div id="result" class="mt-8"></div>
+
+<script>
+document.body.addEventListener('htmx:responseError', function(evt) {
+    console.error('HTMX request failed:', evt.detail.error);
+    console.log('Response status:', evt.detail.xhr.status);
+    console.log('Response text:', evt.detail.xhr.responseText);
+    
+    document.getElementById('result').innerHTML = evt.detail.xhr.responseText;
+});
+
+document.body.addEventListener('htmx:afterRequest', function(evt) {
+    console.log('Request completed. Status:', evt.detail.xhr.status);
+    if (evt.detail.successful) {
+        console.log('Response:', evt.detail.xhr.responseText);
+    }
+});
+</script>
+{% endblock %}

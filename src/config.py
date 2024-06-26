@@ -31,7 +31,7 @@ class Settings(BaseSettings):
         env_file = ".env"
         env_file_encoding = "utf-8"
 
-    def get_llm_client(self) -> instructor:
+    def get_llm_client(self) -> AsyncOpenAI:
         client = instructor.apatch(AsyncOpenAI(api_key=self.OPENAI_API_KEY))
         return instructor.patch(client)
 

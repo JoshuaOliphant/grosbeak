@@ -17,12 +17,12 @@ import logfire
 
 class Orchestrator:
 
-    def __init__(self, llm_client: AsyncOpenAI, serper_api_key: str, github_api_key: str):
+    def __init__(self, llm_client: AsyncOpenAI, serper_api_key: str,
+                 github_api_key: str):
         self.llm_client = llm_client
         self.web_scraper = WebScraper(api_key=serper_api_key,
                                       llm_client=self.llm_client)
-        self.github_scraper = GithubScraper(
-            github_token=github_api_key)
+        self.github_scraper = GithubScraper(github_token=github_api_key)
 
     async def read_resume_file(self, file_path: str) -> str:
         try:

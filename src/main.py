@@ -1,7 +1,7 @@
 import logfire
 from fastapi import FastAPI
-from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from fastapi.middleware.cors import CORSMiddleware
 from src.api.routes import router
 from src.config import load_config
 
@@ -12,6 +12,14 @@ app = FastAPI()
 
 # Set up templates
 templates = Jinja2Templates(directory="templates")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Allows all origins
+    allow_credentials=True,
+    allow_methods=["*"],  # Allows all methods
+    allow_headers=["*"],  # Allows all headers
+)
 
 # Include API routes
 app.include_router(router)

@@ -2,3 +2,8 @@ customized_resume.md
 existing_resume.md
 .logfire
 test_data.txt
+.git
+uploads
+.pythonlibs
+.upm
+**/__pycache__/
