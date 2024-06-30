@@ -1,7 +1,11 @@
-from pydantic import BaseModel, Field
+import markdown
 
 
-class ResumeContent(BaseModel):
-    markdown_content: str = Field(
-        ..., description="The complete resume in Markdown format"
-    )
+class ResumeContent:
+
+    def __init__(self, content: str):
+        self.markdown_content = content
+
+    @property
+    def html_content(self) -> str:
+        return markdown.markdown(self.markdown_content)

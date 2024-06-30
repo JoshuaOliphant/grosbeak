@@ -1,31 +1,19 @@
-import logfire
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from fastapi.middleware.cors import CORSMiddleware
 from src.api.routes import router
-from src.config import load_config
-
-# Initialize Logfire
-logfire.configure()
+from src.config import get_settings
+import logfire
 
 app = FastAPI()
+settings = get_settings()
+logfire.configure()
 
-# Set up templates
-templates = Jinja2Templates(directory="templates")
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],  # Allows all origins
-    allow_credentials=True,
-    allow_methods=["*"],  # Allows all methods
-    allow_headers=["*"],  # Allows all headers
-)
-
-# Include API routes
+# Include the router
 app.include_router(router)
 
-# Load configuration
-config = load_config()
+# Initialize templates
+templates = Jinja2Templates(directory="templates")
 
 if __name__ == "__main__":
     import uvicorn

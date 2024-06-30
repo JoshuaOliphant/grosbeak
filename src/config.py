@@ -5,7 +5,6 @@ from functools import lru_cache
 from openai import AsyncOpenAI
 import instructor
 
-
 class Settings(BaseSettings):
     # OpenAI Configuration
     OPENAI_API_KEY: str = Field(..., env="OPENAI_API_KEY")
@@ -21,9 +20,6 @@ class Settings(BaseSettings):
     DEBUG: bool = Field(False, env="DEBUG")
     LOGFIRE_TOKEN: str = Field(..., env="LOGFIRE_TOKEN")
 
-    # Database Configuration (if you decide to add a database later)
-    # DATABASE_URL: str = Field(..., env="DATABASE_URL")
-
     # File Upload Configuration
     UPLOAD_DIR: str = Field("uploads", env="UPLOAD_DIR")
 
@@ -32,19 +28,16 @@ class Settings(BaseSettings):
         env_file_encoding = "utf-8"
 
     def get_llm_client(self) -> AsyncOpenAI:
-        client = instructor.apatch(AsyncOpenAI(api_key=self.OPENAI_API_KEY))
-        return instructor.patch(client)
-
+        client = AsyncOpenAI(api_key=self.OPENAI_API_KEY)
+        return instructor.apatch(client)
 
 @lru_cache()
 def get_settings() -> Settings:
     return Settings()
 
-
 # Function to load configuration
 def load_config():
     return get_settings()
-
 
 # Create upload directory if it doesn't exist
 os.makedirs(get_settings().UPLOAD_DIR, exist_ok=True)

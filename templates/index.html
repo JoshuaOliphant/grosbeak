@@ -23,25 +23,8 @@
         Customize Resume
     </button>
 </form>
-<div id="loading" class="htmx-indicator hidden">
+<div id="loading" class="htmx-indicator hidden mt-4">
     Processing... Please wait.
 </div>
 <div id="result" class="mt-8"></div>
-
-<script>
-document.body.addEventListener('htmx:responseError', function(evt) {
-    console.error('HTMX request failed:', evt.detail.error);
-    console.log('Response status:', evt.detail.xhr.status);
-    console.log('Response text:', evt.detail.xhr.responseText);
-    
-    document.getElementById('result').innerHTML = evt.detail.xhr.responseText;
-});
-
-document.body.addEventListener('htmx:afterRequest', function(evt) {
-    console.log('Request completed. Status:', evt.detail.xhr.status);
-    if (evt.detail.successful) {
-        console.log('Response:', evt.detail.xhr.responseText);
-    }
-});
-</script>
 {% endblock %}

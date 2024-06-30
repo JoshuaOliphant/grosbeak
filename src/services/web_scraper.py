@@ -1,46 +1,76 @@
 from openai import AsyncOpenAI
 import json
-from src.models.job import JobInformation
 import aiohttp
 import logfire
-from typing import Dict, Any
+from typing import Dict, Any, Union
+from src.models.job import JobInformation
 from src.models.linkedin import LinkedInProfile
 
 
 class WebScraper:
+
     def __init__(self, api_key: str, llm_client: AsyncOpenAI):
         self.api_key = api_key
         self.base_url = "https://scrape.serper.dev"
         self.llm_client = llm_client
 
-    async def fetch_and_parse_job_description(self, url: str) -> JobInformation:
-        headers = {"X-API-KEY": self.api_key, "Content-Type": "application/json"}
+    async def fetch_data(self, url: str) -> Union[str, Dict[str, str]]:
+        """
+        Fetches raw data from the given URL.
+        """
+        headers = {
+            "X-API-KEY": self.api_key,
+            "Content-Type": "application/json"
+        }
         payload = json.dumps({"url": url})
 
-        async with aiohttp.ClientSession() as session:
-            try:
-                async with session.post(
-                    self.base_url, headers=headers, data=payload
-                ) as response:
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.post(self.base_url,
+                                        headers=headers,
+                                        data=payload) as response:
                     if response.status == 200:
-                        data = await response .json()
-                        logfire.info(f"Successfully fetched job description: \n {data}")
-                        return await self.parse_serper_response(data)
+                        return await response.text()
                     else:
-                        logfire.error(
-                            f"Failed to fetch job description for {url}. Status: {response.status}"
-                        )
-                        raise ValueError(
-                            f"Failed to fetch job description. Status: {response.status}"
-                        )
-            except Exception as e:
-                logfire.error(
-                    f"Exception occurred while fetching job description for {url}: {e}"
-                )
-                raise
+                        logfire.error("Failed to fetch data",
+                                      url=url,
+                                      status=response.status)
+                        return {
+                            "error":
+                            f"Failed to fetch data. Status: {response.status}"
+                        }
+        except aiohttp.ClientError as client_error:
+            logfire.error("HTTP request failed",
+                          url=url,
+                          error=str(client_error))
+            return {
+                "error":
+                f"Failed to fetch data due to network error: {str(client_error)}"
+            }
+        except Exception as e:
+            logfire.error("Unexpected error occurred while fetching data",
+                          url=url,
+                          error=str(e))
+            return {"error": f"Unexpected error: {str(e)}"}
 
-    async def parse_serper_response(self, data: Dict[str, Any]) -> JobInformation:
-        prompt = f"""
+    def parse_json(self,
+                   content: str) -> Union[Dict[str, Any], Dict[str, str]]:
+        """
+        Parses a JSON string into a Python dictionary.
+        """
+        try:
+            return json.loads(content)
+        except json.JSONDecodeError as json_error:
+            logfire.error("Failed to parse JSON", error=str(json_error))
+            return {
+                "error": f"Failed to parse response as JSON: {str(json_error)}"
+            }
+
+    def construct_job_prompt(self, data: Dict[str, Any]) -> str:
+        """
+        Constructs a prompt for the LLM to parse job description data.
+        """
+        return f"""
         Parse the following job description data and extract the relevant information:
 
         {json.dumps(data, indent=2)}
@@ -50,80 +80,10 @@ class WebScraper:
         qualifications, and benefits if available.
         """
 
-        try:
-            job_info = await self.llm_client.chat.completions.create(
-                model="gpt-4o",
-                response_model=JobInformation,
-                messages=[
-                    {
-                        "role": "system",
-                        "content": "You are an expert at parsing job descriptions and extracting relevant information.",
-                    },
-                    {"role": "user", "content": prompt},
-                ],
-            )
-            logfire.info(
-                f"Successfully parsed job information from Serper response: \n {job_info}"
-            )
-            return job_info
-        except Exception as e:
-            logfire.error(f"Failed to parse job information from Serper response: {e}")
-            raise
-
-    async def fetch_and_parse_linkedin_profile(
-        self, linkedin_url: str
-    ) -> Dict[str, Any]:
-        headers = {"X-API-KEY": self.api_key, "Content-Type": "application/json"}
-        payload = json.dumps({"url": linkedin_url})
-
-        async with aiohttp.ClientSession() as session:
-            try:
-                async with session.post(
-                    self.base_url, headers=headers, data=payload
-                ) as response:
-                    if response.status == 200:
-                        data = await response.json()
-                        logfire.info(
-                            "Successfully fetched LinkedIn profile", url=linkedin_url
-                        )
-                        return await self.parse_linkedin_data(data)
-                    else:
-                        logfire.error(
-                            f"Failed to fetch LinkedIn profile: {linkedin_url} status: {response.status}",
-                        )
-                        raise ValueError(
-                            f"Failed to fetch LinkedIn profile: {linkedin_url} Status: {response.status}"
-                        )
-            except Exception as e:
-                logfire.error(
-                    "Exception occurred while fetching LinkedIn profile",
-                    url=linkedin_url,
-                    error=str(e),
-                )
-                raise
-
-    async def parse_linkedin_data(self, data: Dict[str, Any]) -> Dict[str, Any]:
-        try:
-            linkedin_info = await self.llm_client.chat.completions.create(
-                model="gpt-4-1106-preview",
-                response_model=LinkedInProfile,
-                messages=[
-                    {
-                        "role": "system",
-                        "content": "You are an expert at parsing LinkedIn profiles and extracting comprehensive information.",
-                    },
-                    {"role": "user", "content": self.construct_linkedin_prompt(data)},
-                ],
-            )
-            logfire.info(
-                "Successfully parsed LinkedIn profile", name=linkedin_info.full_name
-            )
-            return linkedin_info.dict()
-        except Exception as e:
-            logfire.error(f"Failed to parse LinkedIn profile: {str(e)}")
-            return {"error": f"Failed to parse LinkedIn profile: {str(e)}"}
-
     def construct_linkedin_prompt(self, data: Dict[str, Any]) -> str:
+        """
+        Constructs a prompt for the LLM to parse LinkedIn profile data.
+        """
         return f"""
         Parse the following LinkedIn profile data and extract comprehensive information including:
         1. Full name
@@ -148,3 +108,129 @@ class WebScraper:
         Provide a structured output with all available information from the LinkedIn profile.
         If any information is not available, use null or an empty list as appropriate.
         """
+
+    async def query_llm(self, prompt: str,
+                        response_model: Any) -> Union[Any, Dict[str, str]]:
+        """
+        Queries the LLM with the given prompt and returns the parsed information.
+        """
+        try:
+            return await self.llm_client.chat.completions.create(
+                model="gpt-4",
+                response_model=response_model,
+                messages=[
+                    {
+                        "role":
+                        "system",
+                        "content":
+                        "You are an expert at parsing structured data and extracting relevant information.",
+                    },
+                    {
+                        "role": "user",
+                        "content": prompt
+                    },
+                ],
+            )
+        except Exception as e:
+            logfire.error("Failed to query LLM", error=str(e))
+            return {"error": f"Failed to parse information: {str(e)}"}
+
+    async def fetch_job_description(self,
+                                    url: str) -> Union[str, Dict[str, str]]:
+        """
+        Fetches the job description data from the given URL.
+        """
+        result = await self.fetch_data(url)
+        if isinstance(result, dict) and "error" in result:
+            return result
+        logfire.info("Successfully fetched job description", url=url)
+        return result
+
+    def parse_job_description(
+            self, content: str) -> Union[Dict[str, Any], Dict[str, str]]:
+        """
+        Parses the raw job description content into a structured dictionary.
+        """
+        result = self.parse_json(content)
+        if isinstance(result, dict) and "error" in result:
+            return result
+        logfire.info("Successfully parsed job description JSON")
+        return result
+
+    async def process_job_description(
+            self, data: Dict[str,
+                             Any]) -> Union[JobInformation, Dict[str, str]]:
+        """
+        Processes the structured job description data through the LLM.
+        """
+        prompt = self.construct_job_prompt(data)
+        result = await self.query_llm(prompt, JobInformation)
+        if isinstance(result, dict) and "error" in result:
+            return result
+        logfire.info("Successfully processed job description through LLM")
+        return result
+
+    async def fetch_and_parse_job_description(
+            self, url: str) -> Union[JobInformation, Dict[str, str]]:
+        """
+        Orchestrates the process of fetching, parsing, and processing a job description.
+        """
+        fetched_data = await self.fetch_job_description(url)
+        if isinstance(fetched_data, dict) and "error" in fetched_data:
+            return fetched_data
+
+        parsed_data = self.parse_job_description(fetched_data)
+        if isinstance(parsed_data, dict) and "error" in parsed_data:
+            return parsed_data
+
+        return await self.process_job_description(parsed_data)
+
+    async def fetch_linkedin_profile(self,
+                                     url: str) -> Union[str, Dict[str, str]]:
+        """
+        Fetches the LinkedIn profile data from the given URL.
+        """
+        result = await self.fetch_data(url)
+        if isinstance(result, dict) and "error" in result:
+            return result
+        logfire.info("Successfully fetched LinkedIn profile", url=url)
+        return result
+
+    def parse_linkedin_profile(
+            self, content: str) -> Union[Dict[str, Any], Dict[str, str]]:
+        """
+        Parses the raw LinkedIn profile content into a structured dictionary.
+        """
+        result = self.parse_json(content)
+        if isinstance(result, dict) and "error" in result:
+            return result
+        logfire.info("Successfully parsed LinkedIn profile JSON")
+        return result
+
+    async def process_linkedin_profile(
+            self, data: Dict[str,
+                             Any]) -> Union[LinkedInProfile, Dict[str, str]]:
+        """
+        Processes the structured LinkedIn profile data through the LLM.
+        """
+        prompt = self.construct_linkedin_prompt(data)
+        result = await self.query_llm(prompt, LinkedInProfile)
+        if isinstance(result, dict) and "error" in result:
+            return result
+        logfire.info("Successfully processed LinkedIn profile through LLM")
+        return result
+
+    async def fetch_and_parse_linkedin_profile(
+            self, url: str) -> Union[LinkedInProfile, Dict[str, str]]:
+        """
+        Orchestrates the process of fetching, parsing, and processing a LinkedIn profile.
+        """
+        fetched_data = await self.fetch_linkedin_profile(url)
+        if isinstance(fetched_data, dict) and "error" in fetched_data:
+            return fetched_data
+
+        parsed_data = self.parse_linkedin_profile(fetched_data)
+        if isinstance(parsed_data, dict) and "error" in parsed_data:
+            return parsed_data
+
+        return await self.process_linkedin_profile(parsed_data)
