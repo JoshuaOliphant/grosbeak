@@ -7,3 +7,4 @@ uploads
 .pythonlibs
 .upm
 **/__pycache__/
+*.pyc
