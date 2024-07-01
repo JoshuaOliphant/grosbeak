@@ -32,19 +32,23 @@ class Orchestrator:
             raise ValueError(
                 f"Unable to read resume file at {file_path}: {str(e)}")
 
-    async def process_with_agent(
-        self, agent: ResumeAgent, context: Dict[str, Any]
-    ) -> ResumeContent:
+    async def process_with_agent(self, agent: ResumeAgent,
+                                 context: Dict[str, Any]) -> ResumeContent:
         prompt = self.construct_prompt(agent, context)
         try:
             response = await self.llm_client.chat.completions.create(
                 model="gpt-4",
                 messages=[
                     {
-                        "role": "system",
-                        "content": f"You are the {agent.name}. {agent.description}",
+                        "role":
+                        "system",
+                        "content":
+                        f"You are the {agent.name}. {agent.description}",
                     },
-                    {"role": "user", "content": prompt},
+                    {
+                        "role": "user",
+                        "content": prompt
+                    },
                 ],
             )
 
@@ -164,7 +168,7 @@ class Orchestrator:
         linkedin_url: str,
         resume_file_path: str,
         github_url: Optional[str] = None,
-    ) -> str:
+    ) -> ResumeContent:
         # Gather all necessary information concurrently
         job_info_task = self.web_scraper.fetch_and_parse_job_description(
             job_url)
@@ -205,12 +209,13 @@ class Orchestrator:
         }
 
         # Process with ExistingResumeAgent and LinkedInAgent concurrently
-        existing_resume_task = self.process_with_agent(ExistingResumeAgent(), context)
-        linkedin_resume_task = self.process_with_agent(LinkedInAgent(), context)
+        existing_resume_task = self.process_with_agent(ExistingResumeAgent(),
+                                                       context)
+        linkedin_resume_task = self.process_with_agent(LinkedInAgent(),
+                                                       context)
 
         existing_resume_output, linkedin_resume_output = await asyncio.gather(
-            existing_resume_task, linkedin_resume_task
-        )
+            existing_resume_task, linkedin_resume_task)
 
         # Prepare context for AggregatorAgent
         aggregator_context = {
@@ -220,9 +225,8 @@ class Orchestrator:
         }
 
         # Process with AggregatorAgent
-        final_resume = await self.process_with_agent(
-            AggregatorAgent(), aggregator_context
-        )
+        final_resume = await self.process_with_agent(AggregatorAgent(),
+                                                     aggregator_context)
 
         return final_resume
 
