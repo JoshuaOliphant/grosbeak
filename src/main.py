@@ -1,5 +1,4 @@
 from fastapi import FastAPI
-from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from src.api.routes import router
 from src.config import get_settings
@@ -7,7 +6,9 @@ import logfire
 
 app = FastAPI()
 settings = get_settings()
-logfire.configure()
+logfire.configure(pydantic_plugin=logfire.PydanticPlugin(record='all'))
+logfire.instrument_fastapi(app)
+logfire.instrument_aiohttp_client()
 
 # Include the router
 app.include_router(router)
