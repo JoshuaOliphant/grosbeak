@@ -18,15 +18,16 @@ This project is an AI-powered resume customization system that tailors a candida
 
 ## Prerequisites
 
-- Python 3.8+
+- Python 3.10+
 - Poetry (for dependency management)
+- [Logfire](https://docs.pydantic.dev/logfire/) (for logging)
 
 ## Setup
 
 1. Clone the repository:
    ```
-   git clone https://github.com/yourusername/ai-resume-customizer.git
-   cd ai-resume-customizer
+   git clone https://github.com/JoshuaOliphant/grosbeak.git
+   cd grosbeak
    ```
 
 2. Install dependencies using Poetry:
@@ -40,6 +41,7 @@ This project is an AI-powered resume customization system that tailors a candida
    OPENAI_API_KEY=your_openai_api_key
    SERPER_API_KEY=your_serper_api_key
    GITHUB_API_KEY=your_github_api_key
+   LOGFIRE_TOKEN=your_logfire_token
    ```
 
 ## Usage
@@ -49,7 +51,7 @@ This project is an AI-powered resume customization system that tailors a candida
 
 2. Run the script:
    ```
-   poetry run python main.py
+   uvicorn src.main:app --reload
    ```
 
 3. When prompted, enter the following information:
