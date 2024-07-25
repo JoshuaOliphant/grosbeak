@@ -7,15 +7,17 @@ from src.orchestrator import Orchestrator
 from src.config import get_settings
 from src.models.resume import ResumeContent
 import uuid
+import logfire
 
 router = APIRouter()
 settings = get_settings()
 templates = Jinja2Templates(directory="templates")
 
+orchestrator = Orchestrator(settings.get_llm_client(), settings.SERPER_API_KEY,
+                            settings.GITHUB_API_KEY)
+
 # Dictionary to store generated resumes
 generated_resumes = {}
-
-router.post("/customize-resume", response_class=HTMLResponse)
 
 
 @router.post("/customize-resume", response_class=HTMLResponse)
@@ -30,11 +32,6 @@ async def customize_resume(request: Request,
         async with aiofiles.open(file_path, 'wb') as out_file:
             content = await resume_file.read()
             await out_file.write(content)
-
-        # Initialize Orchestrator
-        orchestrator = Orchestrator(settings.get_llm_client(),
-                                    settings.SERPER_API_KEY,
-                                    settings.GITHUB_API_KEY)
 
         # Process the resume
         customized_resume: ResumeContent = await orchestrator.process_resume_request(
@@ -58,7 +55,7 @@ async def customize_resume(request: Request,
             })
 
     except Exception as e:
-        # Render an error template
+        logfire.error("Error during resume customization", error=str(e))
         return templates.TemplateResponse("error.html", {
             "request": request,
             "error_message": str(e)

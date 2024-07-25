@@ -164,4 +164,11 @@ cython_debug/
 .DS_Store
 customized_resume.md
 existing_resume.md
+.logfire
+test_data.txt
+.git
+uploads
+.pythonlibs
+.upm
+**/__pycache__/
 *.pyc

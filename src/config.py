@@ -5,6 +5,7 @@ from functools import lru_cache
 from openai import AsyncOpenAI
 import instructor
 
+
 class Settings(BaseSettings):
     # OpenAI Configuration
     OPENAI_API_KEY: str = Field(..., env="OPENAI_API_KEY")
@@ -31,13 +32,16 @@ class Settings(BaseSettings):
         client = AsyncOpenAI(api_key=self.OPENAI_API_KEY)
         return instructor.apatch(client)
 
+
 @lru_cache()
 def get_settings() -> Settings:
     return Settings()
 
+
 # Function to load configuration
 def load_config():
     return get_settings()
+
 
 # Create upload directory if it doesn't exist
 os.makedirs(get_settings().UPLOAD_DIR, exist_ok=True)
