@@ -172,3 +172,4 @@ uploads
 .upm
 **/__pycache__/
 *.pyc
+pyrightconfig.json
