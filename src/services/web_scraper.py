@@ -1,4 +1,4 @@
-from openai import AsyncOpenAI
+from anthropic import AsyncAnthropic
 import json
 import aiohttp
 import logfire
@@ -9,7 +9,7 @@ from src.models.linkedin import LinkedInProfile
 
 class WebScraper:
 
-    def __init__(self, api_key: str, llm_client: AsyncOpenAI):
+    def __init__(self, api_key: str, llm_client: AsyncAnthropic):
         self.api_key = api_key
         self.base_url = "https://scrape.serper.dev"
         self.llm_client = llm_client
@@ -75,8 +75,8 @@ class WebScraper:
 
         {json.dumps(data, indent=2)}
 
-        Provide a structured output with the job information, including title, company, location, description, 
-        seniority level, employment type, job function, industries, full description, key requirements, 
+        Provide a structured output with the job information, including title, company, location, description,
+        seniority level, employment type, job function, industries, full description, key requirements,
         qualifications, and benefits if available.
         """
 

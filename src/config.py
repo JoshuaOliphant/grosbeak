@@ -2,14 +2,12 @@ import os
 from pydantic import Field
 from pydantic_settings import BaseSettings
 from functools import lru_cache
-from openai import AsyncOpenAI
-import instructor
-
+from anthropic import AsyncAnthropic
 
 class Settings(BaseSettings):
     # OpenAI Configuration
-    OPENAI_API_KEY: str = Field(..., env="OPENAI_API_KEY")
-    OPENAI_MODEL: str = Field("gpt-4o", env="OPENAI_MODEL")
+    ANTHROPIC_API_KEY: str = Field(..., env="ANTHROPIC_API_KEY")
+    ANTHROPIC_MODEL: str = Field("claude-3-5-sonnet-latest", env="ANTHROPIC_MODEL")
 
     # Serper API Configuration
     SERPER_API_KEY: str = Field(..., env="SERPER_API_KEY")
@@ -28,9 +26,9 @@ class Settings(BaseSettings):
         env_file = ".env"
         env_file_encoding = "utf-8"
 
-    def get_llm_client(self) -> AsyncOpenAI:
-        client = AsyncOpenAI(api_key=self.OPENAI_API_KEY)
-        return instructor.apatch(client)
+    def get_llm_client(self) -> AsyncAnthropic:
+        client = AsyncAnthropic(api_key=self.ANTHROPIC_API_KEY)
+        return client
 
 
 @lru_cache()

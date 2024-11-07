@@ -9,12 +9,10 @@ package-mode = false
 [tool.poetry.dependencies]
 python = "^3.10"
 chromadb = "^0.5.3"
-openai = "^1.35.3"
-logfire = {extras = ["fastapi"], version = "^0.45.1"}
+logfire = { extras = ["fastapi"], version = "^0.45.1" }
 pydantic = "^2.7.4"
 aiofiles = "^23.2.1"
 aiohttp = "^3.9.5"
-instructor = "^1.3.3"
 fastapi = "^0.111.0"
 uvicorn = "^0.30.1"
 jinja2 = "^3.1.4"
@@ -22,6 +20,8 @@ python-multipart = "^0.0.9"
 pydantic-settings = "^2.3.4"
 markdown = "^3.6"
 opentelemetry-instrumentation-aiohttp-client = "^0.46b0"
+anthropic = "^0.39.0"
+httpx = "^0.27.2"
 
 
 [build-system]
@@ -30,3 +30,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.logfire]
 pydantic_plugin_record = "all"
+
+[tool.pyright]
+venvPath = "/Users/joshuaoliphant/Library/Caches/pypoetry/virtualenvs"
+venv = "grosbeak-gnYNYzoc-py3.12"

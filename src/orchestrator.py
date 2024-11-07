@@ -1,4 +1,4 @@
-from openai import AsyncOpenAI
+from anthropic import AsyncAnthropic
 from src.services.web_scraper import WebScraper
 from src.services.github_scraper import GithubScraper
 import os
@@ -13,16 +13,81 @@ from src.models.resume import ResumeContent
 from typing import Any, Dict, Optional
 from src.utils.json_encoder import CustomJSONEncoder
 import logfire
+from src.tools import process_tool_call, tools
 
+MODEL_NAME="claude-3-5-sonnet-latest"
 
 class Orchestrator:
 
-    def __init__(self, llm_client: AsyncOpenAI, serper_api_key: str,
+    def __init__(self, llm_client: AsyncAnthropic, serper_api_key: str,
                  github_api_key: str):
         self.llm_client = llm_client
         self.web_scraper = WebScraper(api_key=serper_api_key,
                                       llm_client=self.llm_client)
         self.github_scraper = GithubScraper(github_token=github_api_key)
+
+    async def process(self, github_profile_url: str):
+            logfire.info(f"Processing GitHub profile: {github_profile_url}")
+
+            # First message to get tool usage
+            initial_message = await self.llm_client.messages.create(
+                model=MODEL_NAME,
+                max_tokens=4096,
+                tools=tools,
+                messages=[{
+                    "role": "user",
+                    "content": f"Summarize this GitHub Profile: {github_profile_url}"
+                }]
+            )
+
+            logfire.info("Initial Response")
+            logfire.info(f"Stop Reason: {initial_message.stop_reason}")
+            logfire.info(f"Content: {initial_message.content}")
+
+            tool_use = next(block for block in initial_message.content if block.type == "tool_use")
+            tool_name = tool_use.name
+            tool_input = tool_use.input
+
+            print(f"\nTool Used: {tool_name}")
+            print(f"Tool Input:")
+            print(json.dumps(tool_input, indent=2))
+
+            tool_result = process_tool_call(tool_name, tool_input)
+
+            print(f"\nTool Result:")
+            print(json.dumps(tool_result, indent=2))
+
+            # Second message with tool results
+            final_message = await self.llm_client.messages.create(
+                model=MODEL_NAME,
+                max_tokens=4096,
+                tools=tools,
+                messages=[
+                    {
+                        "role": "user",
+                        "content": f"Summarize this GitHub Profile: {github_profile_url}"
+                    },
+                    {
+                        "role": "assistant",
+                        "content": initial_message.content
+                    },
+                    {
+                        "role": "user",
+                        "content": [
+                            {
+                                "type": "tool_result",
+                                "tool_use_id": tool_use.id,
+                                "content": str(tool_result),
+                            }
+                        ],
+                    },
+                ]
+            )
+
+            print(f"\nResponse:")
+            print(f"Stop Reason: {final_message.stop_reason}")
+            print(f"Content: {final_message.content}")
+            return final_message.content
 
     async def read_resume_file(self, file_path: str) -> str:
         try:

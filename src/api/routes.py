@@ -84,3 +84,19 @@ async def download_resume(resume_id: str):
 @router.get("/", response_class=HTMLResponse)
 async def read_root(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
+
+
+@router.get("/something")
+async def something(github_url: str = ""):
+    logfire.info(f"Test endpoint hit with github_url: {github_url}")
+    try:
+        if not github_url:
+            raise HTTPException(status_code=400, detail="github_url is required")
+        result = await orchestrator.process(github_url)
+        return {"data": result}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/ping")
+async def ping():
+    return {"message": "pong"}
