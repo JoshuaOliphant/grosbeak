@@ -1,7 +1,5 @@
-from openai import AsyncOpenAI
 from src.services.web_scraper import WebScraper
 from src.services.github_scraper import GithubScraper
-import os
 import aiofiles
 import asyncio
 import json
@@ -12,25 +10,19 @@ from src.agents.aggregator_agent import AggregatorAgent
 from src.models.resume import ResumeContent
 from typing import Any, Dict, Optional
 from src.utils.json_encoder import CustomJSONEncoder
+from pydantic_ai import Agent
 import logfire
 
 
 class Orchestrator:
 
-    def __init__(self, llm_client: AsyncOpenAI, serper_api_key: str,
-                 github_api_key: str):
-        self.llm_client = llm_client
+    def __init__(self, serper_api_key: str, github_api_key: str):
+        self.llm_client = Agent(
+            "anthropic:claude-3-5-sonnet-latest",
+        )
         self.web_scraper = WebScraper(api_key=serper_api_key,
                                       llm_client=self.llm_client)
         self.github_scraper = GithubScraper(github_token=github_api_key)
-
-    async def read_resume_file(self, file_path: str) -> str:
-        try:
-            async with aiofiles.open(file_path, mode="r") as file:
-                return await file.read()
-        except IOError as e:
-            raise ValueError(
-                f"Unable to read resume file at {file_path}: {str(e)}")
 
     async def process_with_agent(self, agent: ResumeAgent,
                                  context: Dict[str, Any]) -> ResumeContent:

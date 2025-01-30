@@ -5,7 +5,9 @@ import aiofiles
 import os
 from src.orchestrator import Orchestrator
 from src.config import get_settings
-from src.models.resume import ResumeContent
+from src.services.serper import search
+from src.services.github_scraper import GithubScraper
+from utils.file_utils import read_resume_file
 import uuid
 import logfire
 
@@ -13,8 +15,8 @@ router = APIRouter()
 settings = get_settings()
 templates = Jinja2Templates(directory="templates")
 
-orchestrator = Orchestrator(settings.get_llm_client(), settings.SERPER_API_KEY,
-                            settings.GITHUB_API_KEY)
+orchestrator = Orchestrator(settings.SERPER_API_KEY, settings.GITHUB_API_KEY)
+github_scraper = GithubScraper(settings.GITHUB_API_KEY)
 
 # Dictionary to store generated resumes
 generated_resumes = {}
@@ -34,8 +36,15 @@ async def customize_resume(request: Request,
             await out_file.write(content)
 
         # Process the resume
-        customized_resume: ResumeContent = await orchestrator.process_resume_request(
-            job_url, linkedin_url, file_path, github_url)
+        job_markdown = await search(job_url)
+        linkedin_profile_markdown = await search(linkedin_url)
+        existing_resume_markdown = await read_resume_file(file_path)
+        
+        # Use github_scraper directly with async context manager
+        github_info = None
+        if github_url:
+            async with github_scraper as scraper:
+                github_info = await scraper.fetch_github_info(github_url)
 
         # Clean up the uploaded file
         os.remove(file_path)
